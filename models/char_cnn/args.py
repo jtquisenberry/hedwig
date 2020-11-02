@@ -1,3 +1,5 @@
+print(r'Top of char_cnn\args.py')
+
 import os
 
 import models.args
