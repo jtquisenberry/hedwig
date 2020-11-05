@@ -6,7 +6,8 @@ import models.args
 def get_args():
     parser = models.args.get_args()
 
-    parser.add_argument('--dataset', type=str, default='Reuters', choices=['Reuters', 'AAPD', 'IMDB', 'Yelp2014'])
+    # Additional datasets
+    parser.add_argument('--dataset', type=str, default='Reuters', choices=['Reuters', 'AAPD', 'IMDB', 'Yelp2014', 'Reuters_PD', 'Custom'])
     parser.add_argument('--mode', type=str, default='multichannel', choices=['rand', 'static', 'non-static', 'multichannel'])
     parser.add_argument('--output-channel', type=int, default=100)
     parser.add_argument('--words-dim', type=int, default=300)

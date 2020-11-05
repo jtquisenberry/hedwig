@@ -1,3 +1,18 @@
+# python -m models.kim_cnn --mode static --dataset Reuters --batch-size 32 --lr 0.01 --epochs 30 --dropout 0.5 --seed 3435
+
+import sys
+sys.argv.extend(['--epochs', '30',
+                 '--no-cuda',
+                 '--gpu', '0',
+                 '--lr', '0.01',
+                 '--dropout', '0.5',
+                 '--seed', '3435',
+                 '--data-dir', r'E:\Development\corpora\hedwig-data\datasets',
+                 '--word-vectors-dir', r'E:\Development\corpora\hedwig-data\embeddings\word2vec',
+                 '--word-vectors-file', 'GoogleNews-vectors-negative300.txt',
+                 ])
+
+
 import logging
 import os
 import random
@@ -13,6 +28,11 @@ from datasets.aapd import AAPD
 from datasets.imdb import IMDB
 from datasets.reuters import Reuters
 from datasets.yelp2014 import Yelp2014
+
+# New datasets
+from datasets.reuters_pd import Reuters_PD
+from datasets.custom import Custom
+
 from models.kim_cnn.args import get_args
 from models.kim_cnn.model import KimCNN
 
@@ -75,11 +95,14 @@ if __name__ == '__main__':
     random.seed(args.seed)
     logger = get_logger()
 
+    # Addition of Reuters_PD, Custom
     dataset_map = {
         'Reuters': Reuters,
         'AAPD': AAPD,
         'IMDB': IMDB,
-        'Yelp2014': Yelp2014
+        'Yelp2014': Yelp2014,
+        'Reuters_PD': Reuters_PD,
+        'Custom': Custom
     }
 
     if args.dataset not in dataset_map:

@@ -102,6 +102,9 @@ class ClassificationTrainer(Trainer):
                 self.best_dev_f1 = dev_f1
                 torch.save(self.model, self.snapshot_path)
             else:
+                # JQ Added to ensure that a snapshot is saved even in the 1-epoch case.
+                if epochs == 1:
+                    torch.save(self.model, self.snapshot_path)
                 self.iters_not_improved += 1
                 if self.iters_not_improved >= self.patience:
                     self.early_stop = True

@@ -1,3 +1,6 @@
+import sys
+sys.argv.extend(['--data-dir', r'E:\Development\corpora\hedwig-data\datasets'])
+
 import os
 import random
 

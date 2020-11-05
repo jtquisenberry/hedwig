@@ -1,9 +1,22 @@
+import sys
+sys.argv.extend(['--dataset', 'Reuters', '--no-cuda', '--gpu', '-1',
+                 '--batch-size', '16',
+                 '--seed', '3435',
+                 '--model', 'bert-base-uncased',
+                 '--max-seq-length', '256',
+                 '--data-dir', r'E:\Development\corpora\hedwig-data\datasets',
+                 '--lr', '2e-5',
+                 '--epochs', '1',
+                 '--bert-dir', r'E:\Development\corpora\hedwig-data\models'])
+
 import random
 import time
 
 import numpy as np
 import torch
-from transformers import AdamW, BertForSequenceClassification, BertTokenizer, WarmupLinearSchedule
+
+# JQ Redefined WarmupLinearSchedule per https://huggingface.co/transformers/main_classes/optimizer_schedules.html
+from transformers import AdamW, BertForSequenceClassification, BertTokenizer, get_linear_schedule_with_warmup as WarmupLinearSchedule
 
 from common.constants import *
 from common.evaluators.bert_evaluator import BertEvaluator
@@ -116,8 +129,15 @@ if __name__ == '__main__':
                 optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
         else:
             optimizer = AdamW(optimizer_grouped_parameters, lr=args.lr, weight_decay=0.01, correct_bias=False)
-            scheduler = WarmupLinearSchedule(optimizer, t_total=num_train_optimization_steps,
-                                             warmup_steps=args.warmup_proportion * num_train_optimization_steps)
+
+            # JQ Redefined WarmupLinearSchedule per
+            # https://huggingface.co/transformers/main_classes/optimizer_schedules.html
+            scheduler = WarmupLinearSchedule(optimizer, num_training_steps=num_train_optimization_steps,
+                                             num_warmup_steps=args.warmup_proportion * num_train_optimization_steps)
+
+
+            # scheduler = WarmupLinearSchedule(optimizer, t_total=num_train_optimization_steps,
+            #                                 warmup_steps=args.warmup_proportion * num_train_optimization_steps)
 
         trainer = BertTrainer(model, optimizer, processor, scheduler, tokenizer, args)
         trainer.train()

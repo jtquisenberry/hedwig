@@ -54,7 +54,7 @@ def process_labels(string):
     return [float(x) for x in string]
 
 
-class Reuters(TabularDataset):
+class Custom(TabularDataset):
     NAME = 'Reuters'
     NUM_CLASSES = 90
     IS_MULTILABEL = True
@@ -70,7 +70,7 @@ class Reuters(TabularDataset):
     def splits(cls, path, train=os.path.join('Reuters', 'train.tsv'),
                validation=os.path.join('Reuters', 'dev.tsv'),
                test=os.path.join('Reuters', 'test.tsv'), **kwargs):
-        return super(Reuters, cls).splits(
+        return super(Custom, cls).splits(
             path, train=train, validation=validation, test=test,
             format='tsv', fields=[('label', cls.LABEL_FIELD), ('text', cls.TEXT_FIELD)]
         )
@@ -97,16 +97,16 @@ class Reuters(TabularDataset):
                                      sort_within_batch=True, device=device)
 
 
-class ReutersBOW(Reuters):
+class ReutersBOW(Custom):
     TEXT_FIELD = Field(batch_first=True, tokenize=clean_string, preprocessing=generate_ngrams, include_lengths=True)
 
 
-class ReutersHierarchical(Reuters):
+class ReutersHierarchical(Custom):
     NESTING_FIELD = Field(batch_first=True, tokenize=clean_string)
     TEXT_FIELD = NestedField(NESTING_FIELD, tokenize=split_sents)
 
 
-class ReutersCharQuantized(Reuters):
+class ReutersCharQuantized(Custom):
     ALPHABET = dict(map(lambda t: (t[1], t[0]), enumerate(list("""abcdefghijklmnopqrstuvwxyz0123456789,;.!?:'\"/\\|_@#$%^&*~`+-=<>()[]{}"""))))
     TEXT_FIELD = Field(sequential=False, use_vocab=False, batch_first=True, preprocessing=char_quantize)
 

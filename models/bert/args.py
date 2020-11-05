@@ -37,5 +37,6 @@ def get_args():
                              '0 (default value): dynamic loss scaling.\n'
                              'Positive power of 2: static loss scaling value.\n')
 
+    parser.add_argument('--bert-dir', default=os.path.join(os.pardir, 'hedwig-data', 'models'))
     args = parser.parse_args()
     return args

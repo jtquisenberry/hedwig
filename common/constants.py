@@ -1,4 +1,10 @@
 import os
+import sys
+from argparse import ArgumentParser
+
+parser = ArgumentParser(description="PyTorch deep learning models for document classification")
+parser.add_argument('--bert-dir', default=os.path.join(os.pardir, 'hedwig-data', 'models'))
+args, unknown = parser.parse_known_args()
 
 # Model categories
 BERT_MODELS = ['BERT-Base', 'BERT-Large', 'HBERT-Base', 'HBERT-Large']
@@ -7,8 +13,14 @@ BERT_MODELS = ['BERT-Base', 'BERT-Large', 'HBERT-Base', 'HBERT-Large']
 LOG_HEADER = 'Split  Dev/Acc.  Dev/Pr.  Dev/Re.   Dev/F1   Dev/Loss'
 LOG_TEMPLATE = ' '.join('{:>5s},{:>9.4f},{:>8.4f},{:8.4f},{:8.4f},{:10.4f}'.split(','))
 
+# print(sys.argv)
+
+
 # Path to pretrained model and vocab files
-MODEL_DATA_DIR = os.path.join(os.pardir, 'hedwig-data', 'models')
+# MODEL_DATA_DIR = os.path.join(os.pardir, 'hedwig-data', 'models')
+
+# JQ Add user-configured BERT directory.
+MODEL_DATA_DIR = os.path.join('E:\Development\corpora\hedwig-data\models')
 PRETRAINED_MODEL_ARCHIVE_MAP = {
     'bert-base-uncased': os.path.join(MODEL_DATA_DIR, 'bert_pretrained', 'bert-base-uncased'),
     'bert-large-uncased': os.path.join(MODEL_DATA_DIR, 'bert_pretrained', 'bert-large-uncased'),

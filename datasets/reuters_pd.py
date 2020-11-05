@@ -7,6 +7,7 @@ import csv
 import numpy as np
 import torch
 from torchtext.data import NestedField, Field, TabularDataset
+from .pandas_dataset import PandasDataset
 from torchtext.data.iterator import BucketIterator
 from torchtext.vocab import Vectors
 
@@ -54,7 +55,7 @@ def process_labels(string):
     return [float(x) for x in string]
 
 
-class Reuters(TabularDataset):
+class Reuters_PD(PandasDataset):
     NAME = 'Reuters'
     NUM_CLASSES = 90
     IS_MULTILABEL = True
@@ -70,9 +71,9 @@ class Reuters(TabularDataset):
     def splits(cls, path, train=os.path.join('Reuters', 'train.tsv'),
                validation=os.path.join('Reuters', 'dev.tsv'),
                test=os.path.join('Reuters', 'test.tsv'), **kwargs):
-        return super(Reuters, cls).splits(
+        return super(Reuters_PD, cls).splits(
             path, train=train, validation=validation, test=test,
-            format='tsv', fields=[('label', cls.LABEL_FIELD), ('text', cls.TEXT_FIELD)]
+            format='dataframe-pickled', fields=[('label', cls.LABEL_FIELD), ('text', cls.TEXT_FIELD)]
         )
 
     @classmethod
@@ -97,16 +98,16 @@ class Reuters(TabularDataset):
                                      sort_within_batch=True, device=device)
 
 
-class ReutersBOW(Reuters):
+class ReutersBOW(Reuters_PD):
     TEXT_FIELD = Field(batch_first=True, tokenize=clean_string, preprocessing=generate_ngrams, include_lengths=True)
 
 
-class ReutersHierarchical(Reuters):
+class ReutersHierarchical(Reuters_PD):
     NESTING_FIELD = Field(batch_first=True, tokenize=clean_string)
     TEXT_FIELD = NestedField(NESTING_FIELD, tokenize=split_sents)
 
 
-class ReutersCharQuantized(Reuters):
+class ReutersCharQuantized(Reuters_PD):
     ALPHABET = dict(map(lambda t: (t[1], t[0]), enumerate(list("""abcdefghijklmnopqrstuvwxyz0123456789,;.!?:'\"/\\|_@#$%^&*~`+-=<>()[]{}"""))))
     TEXT_FIELD = Field(sequential=False, use_vocab=False, batch_first=True, preprocessing=char_quantize)
 

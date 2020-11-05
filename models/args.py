@@ -9,6 +9,7 @@ def get_args():
 
     parser.add_argument('--no-cuda', action='store_false', dest='cuda')
     parser.add_argument('--gpu', type=int, default=0)
+
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=0.001)

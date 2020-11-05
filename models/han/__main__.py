@@ -1,3 +1,16 @@
+# --dataset Reuters --mode static --batch-size 32 --trained-model models/han/saves/Reuters/best_model.pt --seed 3435
+
+
+import sys
+sys.argv.extend(['--dataset', 'Reuters', '--mode', 'static', '--no-cuda', '--gpu', '-1',
+                 '--batch-size', '32',
+                 '--seed', '3435',
+                 '--data-dir', r'E:\Development\corpora\hedwig-data\datasets',
+                 '--word-vectors-dir', r'E:\Development\corpora\hedwig-data\embeddings\word2vec',
+                 '--word-vectors-file', 'GoogleNews-vectors-negative300.txt',
+                 '--epochs', '1'])
+
+
 import logging
 import os
 import random

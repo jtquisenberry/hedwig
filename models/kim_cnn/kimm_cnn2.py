@@ -1,4 +1,18 @@
-print('main')
+# python -m models.kim_cnn --mode static --dataset Reuters --batch-size 32 --lr 0.01 --epochs 30 --dropout 0.5 --seed 3435
+
+import sys
+sys.argv.extend(['--epochs', '30',
+                 '--no-cuda',
+                 '--gpu', '0',
+                 '--lr', '0.01',
+                 '--dropout', '0.5',
+                 '--seed', '3435',
+                 '--data-dir', r'E:\Development\corpora\hedwig-data\datasets',
+                 '--word-vectors-dir', r'E:\Development\corpora\hedwig-data\embeddings\word2vec',
+                 '--word-vectors-file', 'GoogleNews-vectors-negative300.txt',
+                 '--dataset', 'Reuters_PD'
+                 ])
+
 
 import logging
 import os
@@ -7,15 +21,21 @@ from copy import deepcopy
 
 import numpy as np
 import torch
+import torch.onnx
 
 from common.evaluate import EvaluatorFactory
 from common.train import TrainerFactory
-from datasets.aapd import AAPDCharQuantized as AAPD
-from datasets.imdb import IMDBCharQuantized as IMDB
-from datasets.reuters import ReutersCharQuantized as Reuters
-from datasets.yelp2014 import Yelp2014CharQuantized as Yelp2014
-from models.char_cnn.args import get_args
-from models.char_cnn.model import CharCNN
+from datasets.aapd import AAPD
+from datasets.imdb import IMDB
+from datasets.reuters import Reuters
+from datasets.yelp2014 import Yelp2014
+
+# New datasets
+from datasets.reuters_pd import Reuters_PD
+from datasets.custom import Custom
+
+from models.kim_cnn.args import get_args
+from models.kim_cnn.model import KimCNN
 
 
 class UnknownWordVecCache(object):
@@ -50,8 +70,6 @@ def evaluate_dataset(split_name, dataset_cls, model, embedding, loader, batch_si
     saved_model_evaluator = EvaluatorFactory.get_evaluator(dataset_cls, model, embedding, loader, batch_size, device)
     if hasattr(saved_model_evaluator, 'is_multilabel'):
         saved_model_evaluator.is_multilabel = is_multilabel
-    if hasattr(saved_model_evaluator, 'ignore_lengths'):
-        saved_model_evaluator.ignore_lengths = True
 
     scores, metric_names = saved_model_evaluator.get_scores()
     print('Evaluation metrics for', split_name)
@@ -59,18 +77,13 @@ def evaluate_dataset(split_name, dataset_cls, model, embedding, loader, batch_si
     print(scores)
 
 
-if __name__ == '__main__' or __name__ == 'models.char_cnn.__main__':
+if __name__ == '__main__':
     # Set default configuration in args.py
-    print('zzzzz')
     args = get_args()
-    logger = get_logger()
 
     # Set random seed for reproducibility
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = True
-    np.random.seed(args.seed)
-    random.seed(args.seed)
-
     if not args.cuda:
         args.gpu = -1
     if torch.cuda.is_available() and args.cuda:
@@ -79,29 +92,33 @@ if __name__ == '__main__' or __name__ == 'models.char_cnn.__main__':
         torch.cuda.manual_seed(args.seed)
     if torch.cuda.is_available() and not args.cuda:
         print('Warning: Using CPU for training')
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    logger = get_logger()
 
+    # Addition of Reuters_PD, Custom
     dataset_map = {
         'Reuters': Reuters,
         'AAPD': AAPD,
         'IMDB': IMDB,
-        'Yelp2014': Yelp2014
+        'Yelp2014': Yelp2014,
+        'Reuters_PD': Reuters_PD,
+        'Custom': Custom
     }
 
     if args.dataset not in dataset_map:
         raise ValueError('Unrecognized dataset')
-
     else:
         dataset_class = dataset_map[args.dataset]
-        train_iter, dev_iter, test_iter = dataset_class.iters(args.data_dir,
-                                                              args.word_vectors_file,
-                                                              args.word_vectors_dir,
-                                                              batch_size=args.batch_size,
-                                                              device=args.gpu,
-                                                              unk_init=UnknownWordVecCache.unk)
+        train_iter, dev_iter, test_iter = dataset_map[args.dataset].iters(args.data_dir, args.word_vectors_file,
+                                                                          args.word_vectors_dir,
+                                                                          batch_size=args.batch_size, device=args.gpu,
+                                                                          unk_init=UnknownWordVecCache.unk)
 
     config = deepcopy(args)
     config.dataset = train_iter.dataset
     config.target_class = train_iter.dataset.NUM_CLASSES
+    config.words_num = len(train_iter.dataset.TEXT_FIELD.vocab)
 
     print('Dataset:', args.dataset)
     print('No. of target classes:', train_iter.dataset.NUM_CLASSES)
@@ -115,7 +132,7 @@ if __name__ == '__main__' or __name__ == 'models.char_cnn.__main__':
         else:
             model = torch.load(args.resume_snapshot, map_location=lambda storage, location: storage)
     else:
-        model = CharCNN(config)
+        model = KimCNN(config)
         if args.cuda:
             model.cuda()
 
@@ -126,20 +143,16 @@ if __name__ == '__main__' or __name__ == 'models.char_cnn.__main__':
     parameter = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = torch.optim.Adam(parameter, lr=args.lr, weight_decay=args.weight_decay)
 
-    train_evaluator = EvaluatorFactory.get_evaluator(dataset_class, model, None, train_iter, args.batch_size, args.gpu)
-    test_evaluator = EvaluatorFactory.get_evaluator(dataset_class, model, None, test_iter, args.batch_size, args.gpu)
-    dev_evaluator = EvaluatorFactory.get_evaluator(dataset_class, model, None, dev_iter, args.batch_size, args.gpu)
+    train_evaluator = EvaluatorFactory.get_evaluator(dataset_map[args.dataset], model, None, train_iter, args.batch_size, args.gpu)
+    test_evaluator = EvaluatorFactory.get_evaluator(dataset_map[args.dataset], model, None, test_iter, args.batch_size, args.gpu)
+    dev_evaluator = EvaluatorFactory.get_evaluator(dataset_map[args.dataset], model, None, dev_iter, args.batch_size, args.gpu)
 
     if hasattr(train_evaluator, 'is_multilabel'):
         train_evaluator.is_multilabel = dataset_class.IS_MULTILABEL
-    if hasattr(dev_evaluator, 'is_multilabel'):
-        dev_evaluator.is_multilabel = dataset_class.IS_MULTILABEL
-    if hasattr(dev_evaluator, 'ignore_lengths'):
-        dev_evaluator.ignore_lengths = True
     if hasattr(test_evaluator, 'is_multilabel'):
         test_evaluator.is_multilabel = dataset_class.IS_MULTILABEL
-    if hasattr(test_evaluator, 'ignore_lengths'):
-        test_evaluator.ignore_lengths = True
+    if hasattr(dev_evaluator, 'is_multilabel'):
+        dev_evaluator.is_multilabel = dataset_class.IS_MULTILABEL
 
     trainer_config = {
         'optimizer': optimizer,
@@ -148,8 +161,7 @@ if __name__ == '__main__' or __name__ == 'models.char_cnn.__main__':
         'patience': args.patience,
         'model_outfile': args.save_path,
         'logger': logger,
-        'is_multilabel': dataset_class.IS_MULTILABEL,
-        'ignore_lengths': True
+        'is_multilabel': dataset_class.IS_MULTILABEL
     }
 
     trainer = TrainerFactory.get_trainer(args.dataset, model, None, train_iter, trainer_config, train_evaluator, test_evaluator, dev_evaluator)
@@ -172,7 +184,3 @@ if __name__ == '__main__' or __name__ == 'models.char_cnn.__main__':
     evaluate_dataset('test', dataset_map[args.dataset], model, None, test_iter, args.batch_size,
                      is_multilabel=dataset_class.IS_MULTILABEL,
                      device=args.gpu)
-else:
-    print(__name__)
-    print('Hello from __main__.py')
-    args = get_args()

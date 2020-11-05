@@ -49,7 +49,7 @@ class CustomArgs():
         self.gpu = gpu
         self.log_every = log_every
         self.lr = lr
-        self.num_affine_nerons = num_affine_neurons
+        self.num_affine_neurons = num_affine_neurons
         self.num_conv_filters = num_conv_filters
         self.output_channel = output_channel
         self.patience = patience
@@ -85,7 +85,8 @@ class Runner():
 
         return logger
 
-    def evaluate_dataset(split_name, dataset_cls, model, embedding, loader, batch_size, device, is_multilabel):
+    # JQ added `self` parameter
+    def evaluate_dataset(self, split_name, dataset_cls, model, embedding, loader, batch_size, device, is_multilabel):
         saved_model_evaluator = EvaluatorFactory.get_evaluator(dataset_cls, model, embedding, loader, batch_size, device)
         if hasattr(saved_model_evaluator, 'is_multilabel'):
             saved_model_evaluator.is_multilabel = is_multilabel
@@ -208,9 +209,6 @@ class Runner():
         if hasattr(trainer, 'snapshot_path'):
             model = torch.load(trainer.snapshot_path)
 
-        self.evaluate_dataset('dev', dataset_map[args.dataset], model, None, dev_iter, args.batch_size,
-                         is_multilabel=dataset_class.IS_MULTILABEL,
-                         device=args.gpu)
-        self.evaluate_dataset('test', dataset_map[args.dataset], model, None, test_iter, args.batch_size,
-                         is_multilabel=dataset_class.IS_MULTILABEL,
-                         device=args.gpu)
+        # evaluate_dataset(split_name, dataset_cls, model, embedding, loader, batch_size, device, is_multilabel
+        self.evaluate_dataset('dev', dataset_map[args.dataset], model, None, dev_iter, args.batch_size, args.gpu, dataset_class.IS_MULTILABEL)
+        self.evaluate_dataset('test', dataset_map[args.dataset], model, None, test_iter, args.batch_size,args.gpu, dataset_class.IS_MULTILABEL)
